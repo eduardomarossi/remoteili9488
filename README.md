@@ -45,3 +45,8 @@ remoteili9488 is an remote client to wrap Atmel ASF ili9488 functions and draw l
 python3 main.py -p COM_PORT
 ```
 
+## Other communications
+
+Starting with v1.1.0
+
+Instead of using Serial, you can also use stdin with --stdin flag or TCP socket (port 10000) with --socket flag.

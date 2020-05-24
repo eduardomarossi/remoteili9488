@@ -2,3 +2,8 @@ digital52:
   name: DS-DIGI.TTF
   size: 52
   color: 0, 0, 0
+
+arial_52:
+  name: arialttf
+  size: 52
+  color: 0, 0, 0

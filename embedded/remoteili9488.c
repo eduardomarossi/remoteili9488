@@ -37,7 +37,7 @@ void mxt_handler(struct mxt_device *device, uint *x, uint *y) {
 
 void USART1_Handler(void) {
 	uint32_t ret = usart_get_status(USART1);
-	char c;
+	uint8_t c;
 
 	if(ret & US_IER_RXRDY) {
 		usart_serial_getchar(USART1, &c);
@@ -46,15 +46,6 @@ void USART1_Handler(void) {
 }
 
 void USART1_init(void) {
-	/* Configura opcoes USART */
-	const sam_usart_opt_t usart_settings = {
-		.baudrate       = 115200,
-		.char_length    = US_MR_CHRL_8_BIT,
-		.parity_type    = US_MR_PAR_NO,
-		.stop_bits   	= US_MR_NBSTOP_1_BIT	,
-		.channel_mode   = US_MR_CHMODE_NORMAL
-	};
-
 	/* Enable the receiver and transmitter. */
 	usart_enable_tx(USART1);
 	usart_enable_rx(USART1);
@@ -101,7 +92,7 @@ void task_uartRx(void *pvParameters) {
 void task_Process(void *pvParameters) {
 	char rxMSG[64];
 	
-	uint32_t x, y, d;
+	uint32_t x, y;
 	
 	while(1){
 		if( xQueueReceive(xQueueMSG, &rxMSG, ( TickType_t ) 500 )){
@@ -113,7 +104,7 @@ void task_Process(void *pvParameters) {
 						y = strtol(token, 0, 10);
 						token = strtok(NULL, ",");
 						if(token != NULL) {
-							d = strtol(token, 0, 10);
+							//d = strtol(token, 0, 10);
 							g_touch_x = x;
 							g_touch_y = y;
 							g_touch_event = 1;
@@ -126,38 +117,38 @@ void task_Process(void *pvParameters) {
 
 
 void ili9488_set_foreground_color(uint32_t color) {
-	printf("#ili9488_set_foreground_color:%u#\r\n", color);
+	printf("#ili9488_set_foreground_color:%lu#\r\n", color);
 }
 
 void ili9488_draw_filled_circle(uint32_t ul_x, uint32_t ul_y, uint32_t ul_r) {
-	printf("#ili9488_draw_filled_circle:%d,%d,%d#\r\n", ul_x, ul_y, ul_r);
+	printf("#ili9488_draw_filled_circle:%lu,%lu,%lu#\r\n", ul_x, ul_y, ul_r);
 }
 
 void ili9488_draw_circle(uint32_t ul_x, uint32_t ul_y, uint32_t ul_r) {
-	printf("#ili9488_draw_circle:%d,%d,%d#\r\n", ul_x, ul_y, ul_r);
+	printf("#ili9488_draw_circle:%lu,%lu,%lu#\r\n", ul_x, ul_y, ul_r);
 }
 
 void ili9488_draw_pixel(uint32_t ul_x, uint32_t ul_y) {
-	printf("#ili9488_draw_pixel:%d,%d#\r\n", ul_x, ul_y);
+	printf("#ili9488_draw_pixel:%lu,%lu#\r\n", ul_x, ul_y);
 }
 
 void ili9488_draw_line(uint32_t ul_x, uint32_t ul_y) {
-	printf("#ili9488_draw_line:%d,%d#\r\n", ul_x, ul_y);
+	printf("#ili9488_draw_line:%lu,%lu#\r\n", ul_x, ul_y);
 }
 
 void ili9488_draw_rectangle(uint32_t ul_x1, uint32_t ul_y1, uint32_t ul_x2, uint32_t ul_y2) {
-	printf("#ili9488_draw_rectangle:%d,%d,%d,%d#\r\n", ul_x1, ul_y1, ul_x2, ul_y2);
+	printf("#ili9488_draw_rectangle:%lu,%lu,%lu,%lu#\r\n", ul_x1, ul_y1, ul_x2, ul_y2);
 }
 
 void ili9488_draw_filled_rectangle(uint32_t ul_x1, uint32_t ul_y1, uint32_t ul_x2, uint32_t ul_y2) {
-	printf("#ili9488_draw_filled_rectangle:%d,%d,%d,%d#\r\n", ul_x1, ul_y1, ul_x2, ul_y2);
+	printf("#ili9488_draw_filled_rectangle:%lu,%lu,%lu,%lu#\r\n", ul_x1, ul_y1, ul_x2, ul_y2);
 }
 
-void font_draw_text1(char *font, const char *text, int x, int y, int spacing) {
+void font_draw_text1(const char *font, const char *text, int x, int y, int spacing) {
 	printf("#font_draw_text:%s,%s,%d,%d,%d#\r\n", font, text, x, y, spacing);
 }
 
 void ili9488_draw_pixmap1(uint32_t ul_x, uint32_t ul_y, uint32_t ul_width, uint32_t ul_height, const char *p_ul_pixmap) {
-	printf("#ili9488_draw_pixmap:%d,%d,%d,%d,%s#\r\n", ul_x, ul_y, ul_width, ul_height, p_ul_pixmap);
+	printf("#ili9488_draw_pixmap:%lu,%lu,%lu,%lu,%s#\r\n", ul_x, ul_y, ul_width, ul_height, p_ul_pixmap);
 }
 

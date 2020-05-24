@@ -59,16 +59,12 @@ void ili9488_draw_rectangle(uint32_t ul_x1, uint32_t ul_y1, uint32_t ul_x2, uint
 
 void ili9488_draw_filled_rectangle(uint32_t ul_x1, uint32_t ul_y1, uint32_t ul_x2, uint32_t ul_y2);
 
-void font_draw_text1(char *font, const char *text, int x, int y, int spacing);
+void font_draw_text1(const char *font, const char *text, int x, int y, int spacing);
 
 void ili9488_draw_pixmap1(uint32_t ul_x, uint32_t ul_y, uint32_t ul_width, uint32_t ul_height, const char *p_ul_pixmap);
 
 void task_uartRx(void *pvParameters);
 void task_Process(void *pvParameters);
-void USART1_init(void);
-
-extern void USART1_Handler(void);
-
 void USART1_init(void);
 
 

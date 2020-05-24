@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # Author: Eduardo Marossi
 import os
+import socket
 import sys
 from datetime import datetime
 import serial
@@ -9,7 +10,7 @@ import pygame
 import yaml
 import logging
 
-VERSION = '1.0.0'
+VERSION = '1.1.0'
 
 
 def get_rgb_from_int(RGBint):
@@ -111,6 +112,9 @@ class RemoteScreen:
         logging.debug('setting color to r:{} g:{} b:{}'.format(r, g, b))
         self.cur_color = (int(r), int(g), int(b))
 
+    def quit(self):
+        self.running = False
+
     def font_draw_text(self, font, text, x, y, spacing):
         font = font.replace('&', '')
         logging.debug('font_draw_text:{},{},{},{},{}'.format(font, text, x, y, spacing))
@@ -130,6 +134,7 @@ class RemoteScreen:
         pygame.draw.circle(self.screen, self.cur_color, (int(x), int(y)), 0)
 
     def process_command(self, line):
+        line = line.replace('#', '')
         if ':' in line:
             args = line[line.find(':')+1:].split(',')
             command = line[:line.find(':')]
@@ -146,7 +151,8 @@ class RemoteScreen:
               'ili9488_draw_filled_circle': {'func': self.draw_filled_circle, 'args': 3},
               'ili9488_draw_circle': {'func': self.draw_circle, 'args': 3},
               'ili9488_draw_pixel': {'func': self.draw_pixel, 'args': 2},
-              'ili9488_draw_pixmap': {'func': self.draw_pixmap, 'args': 5}}
+              'ili9488_draw_pixmap': {'func': self.draw_pixmap, 'args': 5},
+              'quit': {'func': self.quit, 'args': 0}}
 
         if command not in fs.keys():
             logging.error('Command not found {}'.format(command))
@@ -166,6 +172,92 @@ class RemoteScreen:
                 func(args[0], args[1])
             elif func_argcount == 1:
                 func(args[0])
+            elif func_argcount == 0:
+                func()
+
+
+class StdinPort:
+    def __init__(self):
+        self.buff = ''
+        pass
+
+    def readline(self):
+        try:
+            self.buff += sys.stdin.read(1)
+            if self.buff.endswith('\n'):
+                aux = self.buff
+                self.buff = ''
+                return aux
+        except KeyboardInterrupt:
+            sys.stdout.flush()
+            pass
+        return ''
+
+    def touch_function(self, x, y, down):
+        print('#{},{},{}#'.format(x, y, down))
+
+    def close(self):
+        pass
+
+
+class TcpPort:
+    def __init__(self):
+        self.buff = ''
+        self.lines = []
+        # Create a TCP/IP socket
+        import socket
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        # Bind the socket to the port
+        server_address = ('localhost', 10000)
+        print('starting up on {} port {}'.format(*server_address))
+        self.sock.bind(server_address)
+
+        # Listen for incoming connections
+        self.sock.listen(1)
+
+        print('waiting for a connection')
+        connection, client_address = self.sock.accept()
+        print('connection from', client_address)
+        self.conn = connection
+        self.conn.setblocking(0)
+
+    def readline(self):
+        if len(self.lines) > 0:
+            line = self.lines[0]
+            self.lines.remove(line)
+            return line
+
+        try:
+            self.buff += self.conn.recv(1024).decode('ascii')
+            while '\n' in self.buff:
+                pos = self.buff.find('\n')
+                line = self.buff[:pos].strip()
+                self.buff = self.buff[pos+1:]
+                self.lines.append(line)
+
+            if len(self.lines) > 0:
+                line = self.lines[0]
+                self.lines.remove(line)
+                return line
+
+            return ''
+        except socket.error:
+            return ''
+
+    def touch_function(self, x, y, down):
+        self.conn.send('#{},{},{}#\n'.format(x, y, down).encode('ascii'))
+
+    def close(self):
+        try:
+            self.conn.close()
+        except:
+            pass
+        try:
+            self.sock.shutdown()
+        except:
+            pass
 
 
 class TestPort:
@@ -195,6 +287,9 @@ class TestPort:
     def touch_function(self, x, y, down):
         print('#{},{},{}#'.format(x, y, down))
 
+    def close(self):
+        pass
+
 
 class TouchDevice:
     def __init__(self, serial):
@@ -208,6 +303,8 @@ if __name__ == '__main__':
     pygame.init()
     parser = argparse.ArgumentParser(description='remoteili9488 v{}'.format(VERSION))
     parser.add_argument('-p', '--port', type=str, default=None)
+    parser.add_argument('-s', '--stdin', default=False, action='store_true')
+    parser.add_argument('-so', '--socket', default=False, action='store_true')
     parser.add_argument('-l', '--list-ports', default=False, action='store_true')
     parser.add_argument('-lf', '--list-fonts', default=False, action='store_true')
     parser.add_argument('-t', '--test-port', default=False, action='store_true')
@@ -223,6 +320,9 @@ if __name__ == '__main__':
         os.system('python3 -m serial.tools.list_ports')
         sys.exit(0)
 
+    if args.stdin:
+        pass
+
     if args.list_fonts:
         print(pygame.font.get_fonts())
         sys.exit(0)
@@ -231,6 +331,12 @@ if __name__ == '__main__':
 
     if args.test_port:
         ser = TestPort()
+        remote.touch_function = ser.touch_function
+    elif args.socket:
+        ser = TcpPort()
+        remote.touch_function = ser.touch_function
+    elif args.stdin:
+        ser = StdinPort()
         remote.touch_function = ser.touch_function
     elif args.port is not None:
         ser = serial.Serial(args.port, args.baudrate, timeout=0)
@@ -242,6 +348,9 @@ if __name__ == '__main__':
     remote.start_screen()
     remote.load_fonts()
     remote.load_bitmaps()
+
+    remote.update_events()
+    remote.update_screen()
 
     while remote.running:
         line = ser.readline()
@@ -258,5 +367,6 @@ if __name__ == '__main__':
         remote.update_events()
         remote.update_screen()
 
+    ser.close()
     pygame.quit()
 
